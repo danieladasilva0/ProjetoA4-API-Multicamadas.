@@ -1,0 +1,13 @@
+
+from pydantic import BaseModel
+from typing import Optional
+
+
+class RegistroCreate(BaseModel):
+    titulo: str
+    descricao: Optional[str] = None
+    ativo: bool = True
+
+
+class RegistroResponse(RegistroCreate):
+    id: int
