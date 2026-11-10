@@ -1,0 +1,27 @@
+
+import sqlite3
+
+DATABASE_NAME = "banco_a3.db"
+
+
+def conectar_banco():
+    conexao = sqlite3.connect(DATABASE_NAME)
+    conexao.row_factory = sqlite3.Row
+    return conexao
+
+
+def criar_tabelas():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            ativo BOOLEAN NOT NULL DEFAULT 1
+        )
+    """)
+
+    conexao.commit()
+    conexao.close()
