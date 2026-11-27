@@ -7,13 +7,24 @@ Exemplo acadêmico de uma API Python com FastAPI e SQLite, organizada por respon
 ```text
 Cliente
   └── Nginx (:8080) ──proxy──> FastAPI/Uvicorn (:8000, rede interna)
+                                  ├── /registros → rota → serviço → repositório → SQLite
                                   ├── /health → rota → serviço → repositório → SQLite
                                   └── /metrics → métricas Prometheus
 Prometheus (:9090) ──coleta──> API:8000/metrics
 Grafana (:3000) ──consulta──> Prometheus
 ```
 
-As rotas ficam em `src/app/api`, as regras de negócio em `services`, o acesso ao SQLite em `repositories`, configurações comuns em `core` e métricas/logs em `middleware`. O endpoint `/health` testa a conexão com SQLite; o banco é criado no primeiro acesso.
+As rotas ficam em `src/app/api`, os contratos Pydantic em `src/app/models`, as regras de negócio em `services`, o acesso ao SQLite em `repositories`, configurações comuns em `core` e métricas/logs em `middleware`. A tabela `registros` é preparada quando a API inicia; `/health` testa a conexão com o banco.
+
+O CRUD de `/registros` foi adaptado do [repositório de origem](https://github.com/fvaladares/ApitUniBHSD202602), mantendo os campos `titulo`, `descricao` e `ativo` e organizando a implementação em camadas:
+
+| Método | Rota | Ação |
+| --- | --- | --- |
+| `POST` | `/registros` | Cria registro (201; título em branco retorna 400) |
+| `GET` | `/registros` | Lista registros |
+| `GET` | `/registros/{id}` | Busca por ID (404 quando não existe) |
+| `PUT` | `/registros/{id}` | Atualiza por ID (404 quando não existe) |
+| `DELETE` | `/registros/{id}` | Exclui por ID (404 quando não existe) |
 
 ## Requisitos
 
@@ -47,6 +58,7 @@ As rotas ficam em `src/app/api`, as regras de negócio em `services`, o acesso a
 ## Acessar e validar
 
 - API pelo proxy Nginx: <http://localhost:8080/health>
+- CRUD pelo proxy Nginx: <http://localhost:8080/registros>
 - Documentação interativa: <http://localhost:8080/docs>
 - Métricas da API pelo proxy: <http://localhost:8080/metrics>
 - Prometheus: <http://localhost:9090/targets>
@@ -58,10 +70,13 @@ O alvo `fastapi` deve aparecer como **UP** em `/targets`. No Grafana, abra a pas
 2. Taxa de respostas HTTP 4xx e 5xx.
 3. Latência média das respostas.
 
-Para gerar tráfego de teste, faça algumas chamadas à API e também a uma rota inexistente (para obter 404):
+Para criar e listar registros, além de gerar tráfego para o dashboard:
 
 ```bash
-curl http://localhost:8080/health
+curl -X POST http://localhost:8080/registros \
+  -H 'Content-Type: application/json' \
+  -d '{"titulo":"Primeiro registro","descricao":"Exemplo","ativo":true}'
+curl http://localhost:8080/registros
 curl http://localhost:8080/rota-inexistente
 ```
 
