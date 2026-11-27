@@ -36,8 +36,8 @@ O CRUD de `/registros` foi adaptado do [repositório de origem](https://github.c
 1. Clone o projeto e entre na pasta:
 
    ```bash
-   git clone <URL_DO_REPOSITORIO>
-   cd ProjetoA4-API-Multicamadas
+   git clone https://github.com/danieladasilva0/ProjetoA4-API-Multicamadas. api-multicamadas
+   cd api-multicamadas
    ```
 
 2. Crie o arquivo local de configuração do Grafana:
