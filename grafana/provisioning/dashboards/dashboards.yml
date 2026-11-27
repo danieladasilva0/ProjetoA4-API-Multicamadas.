@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Projeto A4
+    orgId: 1
+    folder: Projeto A4
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
