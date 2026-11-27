@@ -1,23 +1,93 @@
-# ProjetoA4-API-Multicamadas.
-Projeto A4 - API Multicamadas
+# Projeto A4 — API Multicamadas
 
-Este projeto foi desenvolvido como parte de uma atividade acadêmica da disciplina.
+Exemplo acadêmico de uma API Python com FastAPI e SQLite, organizada por responsabilidade, publicada por Nginx e monitorada com Prometheus e Grafana.
 
-O objetivo é refatorar uma API desenvolvida em Python, utilizando FastAPI e SQLite, organizando o código em múltiplas camadas.
+## Arquitetura
 
-A proposta é separar as responsabilidades da aplicação para deixar o código mais organizado e facilitar sua manutenção.
+```text
+Cliente
+  └── Nginx (:8080) ──proxy──> FastAPI/Uvicorn (:8000, rede interna)
+                                  ├── /health → rota → serviço → repositório → SQLite
+                                  └── /metrics → métricas Prometheus
+Prometheus (:9090) ──coleta──> API:8000/metrics
+Grafana (:3000) ──consulta──> Prometheus
+```
 
-Tecnologias utilizadas
+As rotas ficam em `src/app/api`, as regras de negócio em `services`, o acesso ao SQLite em `repositories`, configurações comuns em `core` e métricas/logs em `middleware`. O endpoint `/health` testa a conexão com SQLite; o banco é criado no primeiro acesso.
 
-* Python
-* FastAPI
-* SQLite
-* Pydantic
+## Requisitos
 
-Organização do projeto
+- Docker com o plugin Docker Compose
+- Git (opcional, para trabalhar com branches)
 
-O projeto será dividido em arquivos, separando as funções de banco de dados, os modelos e as rotas da API.
+## Instalar e configurar
 
-Objetivo
+1. Clone o projeto e entre na pasta:
 
-Aplicar na prática os conceitos de arquitetura em camadas estudados na disciplina.
+   ```bash
+   git clone <URL_DO_REPOSITORIO>
+   cd ProjetoA4-API-Multicamadas
+   ```
+
+2. Crie o arquivo local de configuração do Grafana:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edite `.env` e troque `GRAFANA_ADMIN_PASSWORD` por uma senha sua. Não envie o `.env` ao Git.
+
+3. Construa e inicie os serviços:
+
+   ```bash
+   docker compose up --build -d
+   docker compose ps
+   ```
+
+## Acessar e validar
+
+- API pelo proxy Nginx: <http://localhost:8080/health>
+- Documentação interativa: <http://localhost:8080/docs>
+- Métricas da API pelo proxy: <http://localhost:8080/metrics>
+- Prometheus: <http://localhost:9090/targets>
+- Grafana: <http://localhost:3000> (usuário e senha definidos no `.env`)
+
+O alvo `fastapi` deve aparecer como **UP** em `/targets`. No Grafana, abra a pasta **Projeto A4** e o dashboard **API — Observabilidade**. Ele contém três painéis:
+
+1. Vazão de requisições por segundo.
+2. Taxa de respostas HTTP 4xx e 5xx.
+3. Latência média das respostas.
+
+Para gerar tráfego de teste, faça algumas chamadas à API e também a uma rota inexistente (para obter 404):
+
+```bash
+curl http://localhost:8080/health
+curl http://localhost:8080/rota-inexistente
+```
+
+As métricas são agregadas em janelas de tempo; pode levar um ou dois minutos para os gráficos mostrarem os primeiros pontos.
+
+## Executar no Replit para desenvolvimento
+
+O workflow do Replit inicia o Uvicorn atrás do Nginx na porta de preview 5000. O acesso pelo preview segue o mesmo proxy reverso. Para executar testes localmente:
+
+```bash
+uv sync --extra dev
+uv run pytest
+```
+
+O Compose continua sendo a forma de subir Prometheus e Grafana. No Replit, também é possível rodar os testes com `uv run pytest`.
+
+## Logs, métricas e persistência
+
+O middleware registra método, rota, status e duração em logs JSON no stdout, usando Loguru. Ele também coleta `http_requests_total` e `http_request_duration_seconds`; o Prometheus lê essas métricas a cada 15 segundos. A rota `/metrics` é usada pelo Prometheus e também passa pelo Nginx quando acessada externamente.
+
+O Nginx é o único serviço que publica a API no host. Uvicorn fica acessível apenas na rede interna do Compose; Prometheus consulta a API diretamente nessa rede. Grafana consulta Prometheus pela rede interna. Volumes do Compose preservam o banco SQLite e os dados das ferramentas entre reinicializações.
+
+## Parar os serviços
+
+```bash
+docker compose down
+```
+
+Para apagar também os dados persistidos do SQLite, Prometheus e Grafana, use `docker compose down -v`. Esse comando remove os volumes e seus dados.
